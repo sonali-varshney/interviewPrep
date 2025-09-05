@@ -1,0 +1,261 @@
+Q) One of your pipeline is failing continuously how we check and troubleshoot and fix permanently?
+2. Identify the Failing Stage
+Build stage failure → Check code changes, dependencies, Dockerfile, build agents, environment differences.
+Test stage failure → See if tests are failing consistently or intermittently, check data, flaky tests, infra limits.
+Deploy stage failure → Look at infra configs (Terraform/Helm), credentials, kube manifests, networking, service discovery.
+Infra issue → Runners/agents down, disk space, memory exhaustion, permission issues.
+3. Troubleshooting Steps
+Check logs in detail.
+Review the last successful pipeline vs the failing one → what changed? (code, infra, pipeline config).
+If intermittent → check for resource limits, network latency, external dependencies.
+Validate credentials, secrets, tokens.
+Run pipeline in debug mode if supported.
+4. Fixing the Issue
+Apply immediate fix (e.g., dependency update, re-provision runner, correct YAML syntax, increase resource limits).
+Verify by re-running pipeline.
+Document the fix for team visibility.
+5. Permanent Resolution
+Perform Root Cause Analysis (RCA).
+Add preventive measures:
+Pin dependency versions (avoid "latest").
+Add retries/backoff for flaky steps.
+Improve test reliability (mock external services).
+Add resource monitoring for agents/runners.
+Use secrets manager instead of hardcoded tokens.
+Add pipeline quality gates (SonarQube, linting, security scans).
+6. Example Answer (Interview Style)
+“If a pipeline is failing continuously, I first check the pipeline logs to identify which stage is failing —“If a pipeline is failing continuously, I first check the pipeline logs to identify which stage is failing — build, test, or deploy. I compare with the last successful run to see what changed recently (code commits, dependency updates, infra configs). For example, if it’s a build failure due to dependency version mismatch, I’ll reproduce locally, fix by pinning versions, and test again.
+Once fixed, I make sure to implement a permanent solution — like locking dependencies, adding retry logic for flaky stages, or improving test reliability. I also set up monitoring/alerts so failures are detected early and documented the RCA to avoid similar issues in future.
+Use secrets manager instead of hardcoded tokens.
+Add pipeline quality gates (SonarQube, linting, security scans)
+
+Q) If a user have Full Administratior, Admin & S3 deny permissions. They can access S3 buckets or not?
+No. In AWS, explicit Deny always takes precedence over Allow.
+
+Q) How we secure terraform env of multiple members working on team
+When multiple people collaborate on Terraform, the biggest challenges are state management, access control, consistency, and security.
+1. Secure State Management
+Terraform state is the most sensitive part (it contains resource IDs, ARNs, sometimes secrets).
+Remote Backend: Store state remotely in S3, GCS, or Azure Blob instead of local files.
+State Locking: Use DynamoDB (AWS), CosmosDB (Azure), or Cloud Storage locking to prevent concurrent changes.
+Versioning & Encryption:
+Enable S3 bucket versioning and server-side encryption (KMS).
+Restrict bucket access with IAM policies (only Terraform admins).
+
+2. Role-Based Access Control (RBAC)
+Use least privilege IAM roles — don’t give everyone AdministratorAccess.
+For example:
+Developers → plan only (read/validate).
+DevOps leads → apply permissions.
+Auditors → read state only.
+Integrate with AWS IAM, Azure AD, or GCP IAM to manage access centrally.
+
+3. Separate Environments (dev, stage, prod)
+Keep environment configs isolated with workspaces or directory structure.
+Use separate state files per environment/region.
+Control access with IAM → e.g., only senior engineers can apply in prod.
+
+4. Secret Management
+Never hardcode credentials in .tf or .tfvars.
+Use Terraform variables + Secrets Manager (AWS Secrets Manager, Vault, SSM Parameter Store).
+Configure CI/CD pipelines to inject secrets securely at runtime.
+
+5. Collaboration & Workflow
+Enforce code reviews via GitHub/GitLab pull requests before merging Terraform changes.
+Run terraform fmt + terraform validate in CI to enforce consistency.
+Use Terraform Cloud/Enterprise or Atlantis to run plans in PRs with approval gates.
+
+6. Monitoring & Audit
+Enable Terraform logging (CloudTrail, S3 access logs).
+Track who applied which change (Terraform Cloud or GitOps pipelines).
+Keep state file access logs for compliance.
+
+7. Permanent Security Practices
+
+Enable MFA for IAM users.
+Rotate access keys regularly.
+Use KMS to encrypt state & secrets.
+Define organizational guardrails with SCPs (Service Control Policies in AWS Organizations).
+
+
+Q) How we can upload 50TB data into S3 securily?
+
+Options depend on your bandwidth, time, and budget:
+A. Over the Network
+S3 Multipart Upload → Upload large objects in parts (recommended for >100 MB, required >5 GB).
+Use AWS CLI with aws s3 cp or aws s3 sync (with --sse for encryption).
+Enable TLS encryption in transit (default when using AWS CLI/SDK).
+Enable S3 default encryption (SSE-KMS or SSE-S3) for encryption at rest.
+Consider S3 Transfer Acceleration if uploading globally (uses CloudFront edge).
+
+B. Physical Data Transfer
+For 50 TB, AWS often recommends AWS Snowball Edge:
+You order a Snowball device, AWS ships it to you.
+You load your 50 TB onto the device (encrypted automatically with KMS).
+Ship it back to AWS, they import the data into your S3 bucket.
+Much faster & cost-effective than pushing 50 TB over the internet.
+
+
+Q) I have 50TB storage and not using 5 years how can I do cost optimize)
+Since data is rarely accessed, go with archival tiers:
+Amazon S3 Glacier Instant Retrieval – Low-cost but can be retrieved instantly.
+Amazon S3 Glacier Flexible Retrieval – Cheaper, retrieval in minutes to hours.
+Amazon S3 Glacier Deep Archive – Lowest cost, retrieval takes 12–48 hours.
+👉 If you really don’t need access for 5+ years, Glacier Deep Archive is cheapest.which reduces costs by over 90% compared to Standard storage
+
+
+Q) SAST AND DAST
+1. SAST (Static Application Security Testing)
+What it is: Analyzes source code, bytecode, or binaries without executing the program.
+When it runs: Early in the SDLC (coding/build phase).
+Goal: Find vulnerabilities in code before deployment.
+
+Common issues found:
+SQL injection, XSS patterns
+Hardcoded secrets
+Insecure APIs
+Authentication flaws
+
+Tools: SonarQube, Checkmarx, Veracode SAST, Fortify, Semgrep.
+
+Pros:
+Detects issues early (cheaper to fix).
+Runs automatically in CI/CD.
+
+Cons:
+False positives common.
+Needs source code access.
+
+2. DAST (Dynamic Application Security Testing)
+
+What it is: Tests the running application (black-box testing).
+
+When it runs: After deployment (QA, staging, or prod).
+
+Goal: Find vulnerabilities in the app’s behavior, APIs, and runtime.
+
+Common issues found:
+Runtime SQL injection
+Cross-site scripting (XSS)
+Broken authentication/session handling
+Misconfigured headers (CORS, CSP)
+
+Tools: OWASP ZAP, Burp Suite, Veracode DAST, Netsparker.
+
+Pros:
+Doesn’t need source code.
+Finds real exploitable issues.
+
+Cons:
+Runs late in SDLC.
+Might miss code-level flaws.
+
+
+
+
+
+Directory Structure Approach
+👉Keep separate folders for each environment
+👉 Each environment has its own state file & variables.
+👉 Use remote backend (e.g., S3 + DynamoDB lock) per environment..
+
+2. Workspaces Approach
+
+Use a single module but multiple workspaces.
+
+terraform workspace new dev
+terraform workspace new prod
+terraform workspace select dev
+terraform apply -var-file=dev.tfvars
+terraform workspace select prod
+terraform apply -var-file=prod.tfvars
+
+
+👉 Keeps same code, separates states by workspace.
+👉 Good for small teams, but can get messy with many environments.
+
+3. Modular Approach (Recommended for Teams)
+
+Create reusable modules and environment-specific configs.
+
+modules/
+├── vpc/
+├── ec2/
+environments/
+├── dev/
+│   └── main.tf   (calls modules with dev vars)
+├── stage/
+│   └── main.tf
+└── prod/
+    └── main.tf
+
+
+👉 Code reusability + clear separation.
+👉 Works well with Git branching (e.g., feature → dev → stage → prod)
+
+
+4. CI/CD Pipeline Approach
+
+Store Terraform code in Git.
+
+Each branch → maps to environment.
+
+Example GitHub Actions/Jenkins flow:
+
+feature/* → runs terraform plan only.
+
+dev branch → runs terraform apply in dev.
+
+stage branch → runs terraform apply in stage.
+
+main/prod branch → runs terraform apply in prod (after approval).
+
+
+												NON TECHNICAL
+Q) If we are using third party tool instal on our AWS account. How we can secure? What all are things we can check before installing?
+✅ Vendor Security & Compliance
+Check if the tool/vendor is AWS Marketplace verified.
+Verify security certifications: SOC 2, ISO 27001, GDPR, HIPAA (if relevant).
+Ensure vendor provides security whitepapers & follows best practices.
+
+✅ IAM Permissions
+Never give AdministratorAccess.
+Review IAM roles/policies the tool requires.
+Follow least privilege principle — grant only what’s needed.
+
+✅ Networking & Data Security
+Check if the tool runs inside your VPC or outside (SaaS).
+Ensure data is encrypted in transit (TLS) and at rest (KMS/SSE).
+Validate where logs and sensitive data are stored.
+
+✅ Cost & Governance
+Estimate AWS costs (compute, storage, API calls).
+Enable CloudTrail logging for auditability.
+Ensure tagging policies are followed.
+
+Q) After installation if we are facing any issue with that if we are not able to fix. How we can explain to our manager and thir IT teams to fix it while they don't know about technical.
+If the tool is already installed and you face issues:
+🔍 Troubleshoot First
+Check CloudWatch logs, IAM permissions, VPC/network connectivity.
+Validate configuration matches vendor’s documentation.
+Look for known issues in vendor’s knowledge base/community.
+
+📣 If Not Fixable → Escalate
+Open a support ticket with the vendor (most AWS Marketplace vendors provide SLAs).
+Gather logs, error messages, screenshots before escalating.
+Roll back (disable tool) if it’s impacting production.
+
+Your manager may not understand IAM, VPC, or Terraform — so explain in business impact language.
+Example structure:
+Problem Summary (Non-technical):
+“The third-party tool we installed is not able to connect to our AWS resources due to permission issues.”
+Impact:
+“Because of this, it cannot scan our environment properly, which delays our compliance checks.”
+Current Action:
+“We reviewed the setup and logs internally. It seems to be an issue with how the vendor’s software interacts with AWS.”
+Next Steps:
+“We are opening a support case with the vendor and will share all error details with them. Our team will coordinate with the vendor’s IT team to resolve this.”
+Reassurance:
+“No critical services are impacted. We’ve contained the issue and will provide an update once the vendor responds.”
+While communicating with my manager or non-technical IT staff, I avoid deep technical terms and instead explain in business terms — what is the issue, what’s the impact, and what steps we’re taking to fix it with the vendor.”
+
