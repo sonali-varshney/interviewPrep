@@ -259,3 +259,34 @@ Reassurance:
 “No critical services are impacted. We’ve contained the issue and will provide an update once the vendor responds.”
 While communicating with my manager or non-technical IT staff, I avoid deep technical terms and instead explain in business terms — what is the issue, what’s the impact, and what steps we’re taking to fix it with the vendor.”
 
+ difference between add and copy in dockerfile
+COPY-Primarily designed for simply copying local files and directories from the build context (the directory where the Dockerfile is located) to a specified destination within the Docker image.
+ADD- Can fetch files from remote URLs and place them into the image.
+Archive Extraction: Automatically extracts compressed archive files (like .tar, .tar.gz, .zip) into the destination directory within the image. This extraction occurs automatically if the source is a recognized archive format
+
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim-buster
+# Set the working directory in the container
+WORKDIR /app
+# Copy the current directory contents into the container at /app
+COPY . /app
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+# Make port 5000 available to the world outside this container
+EXPOSE 5000
+# Define environment variable
+ENV FLASK_APP=app.py
+# Run app.py when the container launches
+CMD ["flask", "run", "--host=0.0.0.0"]
+
+diff between entrypoint and cmd
+CMD instructions are easily overridden by providing a command or arguments directly in the docker run command.ENTRYPOINT defines the main executable that will always run when a container starts. It essentially turns your image into an executable, where any arguments provided during docker run are appended to the ENTRYPOINT command.
+
+diff between run and cmd
+RUN commands execute at image build time, while CMD commands execute at container runtime.
+Layering: RUN creates new image layers, while CMD does not.
+Overriding: CMD can be overridden when running a container, whereas RUN cannot. 
+RUN is for building the image and installing dependencies, while CMD specifies the default command for container execution.
+
+
+"Hi, I’m [Your Name]. I have 8 years of IT experience, with 5 years as a DevOps Engineer. In my current role, I’ve been responsible for designing and implementing CI/CD pipelines and automating infrastructure provisioning. I have strong hands-on experience with Infrastructure as Code using Terraform and CloudFormation, and I’ve built secure and scalable pipelines using GitHub Actions, Harness, and TeamCity. I’ve also worked on integrating tools like SonarQube and Veracode for code quality and security checks. My focus has been on enabling faster, reliable, and automated software delivery while ensuring infrastructure scalability and security."
