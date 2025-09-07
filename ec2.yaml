@@ -1,0 +1,92 @@
+resource "aws_instance" "ec2_dev" {
+
+   ami                    = var.ami
+   count                  = length(var.subnet_id)   # note
+   instance_type          = var.instance_type
+   subnet_id              = var.subnet_id[count.index]  # note
+   vpc_security_group_ids = var.security_gp
+   user_data              = file("nginx.sh")  #Note
+   tags = {
+     Name                 = ec2-${ count.index + 1 }
+}
+ 
+ 
+
+ 
+ 
+ sudo yum update -y
+sudo yum install epel-release -y
+sudo yum install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
+      
+# Create a new Nginx configuration file for the /images path
+# Using a custom conf.d file is a best practice
+cat << 'EOF' | sudo tee /etc/nginx/conf.d/images.conf
+server {
+    listen 80;
+    server_name _;
+
+    # Default website content
+    location / {
+        root /var/www/html;
+        index index.html;
+    }
+
+    # Configuration for the /images path
+    location /images/ {
+        # 'alias' maps the URI path to a specific filesystem path
+        alias /usr/share/nginx/images/;
+    }
+}
+EOF
+
+# Create the images directory
+sudo mkdir -p /usr/share/nginx/images
+
+# Download a sample image for testing
+sudo curl -o /usr/share/nginx/images/sample.jpg "https://upload.wikimedia.org/wikipedia/commons/4/43/Eifel_National_Park.jpg"
+
+# Restart Nginx to apply the new configuration
+sudo systemctl restart nginx
+
+
+
+
+resource "aws_security_group" "ec2_sec_gp" {
+  name        = "ec2_sec_gp"
+  description = "Allow TLS inbound traffic and all outbound traffic"
+  vpc_id      = aws_vpc.vpcdemo.id
+
+  tags = {
+    Name = "ec2_secgp"
+  }
+
+  # Allow SSH access from anywhere (you can restrict this to your IP)
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # You can change this to your IP for better security
+  }
+
+  # Allow HTTP (port 80) traffic ONLY from the load balancer's security group
+  ingress {
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    security_groups = [aws_security_group.alb_sec_gp.id]  # Only allow traffic from the ALB's security group
+  }
+
+  # Allow all outbound traffic
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+
+
