@@ -88,5 +88,91 @@ resource "aws_security_group" "ec2_sec_gp" {
 }
 
 
+*********************************
+
+
+resource "aws_vpc" "vpcdemo" {
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "vpcdemo"
+  }
+}
+
+resource "aws_subnet" "pubsubnet" {
+  vpc_id     = aws_vpc.vpcdemo.id
+  count      = length[var.cidr_block]                      #Note
+
+  cidr_block = var.cidr_block[count.index]                #Note
+  availability_zone = var.availability_zone[count.index]  #Note
+  map_public_ip_on_launch = true   # to indicate that instances launched into the subnet should be assigned a public IP address
+  
+  tags = {
+    Name = "publicsubnet-${var.availability_zone[count.index]}"
+  }
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.vpcdemo.id
+
+  tags = {
+    Name = "igw"
+  }
+}
+
+resource "aws_route_table" "pub_route_table" {
+  vpc_id = aws_vpc.vpcdemo.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "public route table"
+  }
+}
+
+
+
+
+
+
+output "vpcid"{
+    value = aws_vpc.vpcdemo.id
+}
+
+output "prvsubnet"{
+    value = aws_subnet.prvsubnet.id
+}
+
+output "pubsubnet"{
+    value = aws_subnet.pubsubnet[*].id   # Note
+}
+
+
+
+
+
+
+variable "cidr_block"{
+    type = list
+    default = ["10.0.0.0/24","10.0.1.0/24","10.1.0.0/24"]
+}
+
+variable "availability_zone"{
+    type = list
+    default = ["us-east-1a","us-east-1b","us-east-1c"]
+}
+
+
+
+resource "aws_route_table_association" "associate_with_subnet" {
+  count          = length(var.cidr_block)                             #NOTE
+  subnet_id      = element(aws_subnet.pubsubnet[*].id, count.index)   #NOTE
+  route_table_id = aws_route_table.pub_route_table.id
+}
+
+
+
 
 
